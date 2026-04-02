@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <title>MyBookMaker</title>
+  </head>
+  <body>
+    <h1>📚 MyBookMaker</h1>
+
+    <h3>✍️ 책 만들기</h3>
+    <input id="title" placeholder="제목" /><br /><br />
+    <textarea id="content" placeholder="내용"></textarea><br /><br />
+    <button onclick="createBook()">책 생성</button>
+
+    <h3>📦 주문하기</h3>
+    <input id="bookId" placeholder="book_id 입력" /><br /><br />
+    <button onclick="orderBook()">주문</button>
+
+    <script>
+      async function createBook() {
+        const title = document.getElementById("title").value;
+        const content = document.getElementById("content").value;
+
+        const res = await fetch("http://localhost:3000/api/create-book", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ title, content }),
+        });
+
+        const data = await res.json();
+        alert("생성 완료: " + data.book_id);
+      }
+
+      async function orderBook() {
+        const book_id = document.getElementById("bookId").value;
+
+        const res = await fetch("http://localhost:3000/api/order", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            book_id,
+            options: [
+              { name: "cover", value: "hard" },
+              { name: "page", value: "100" },
+            ],
+          }),
+        });
+
+        const data = await res.json();
+        alert("주문 완료: " + data.orderId);
+      }
+    </script>
+  </body>
+</html>
