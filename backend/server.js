@@ -5,9 +5,8 @@ import axios from "axios";
 const app = express();
 app.use(express.json());
 
-/* =========================
-   🔥 DB 연결 (재시도 포함)
-========================= */
+// DB 연결 (재시도 포함)
+
 let db;
 
 function connectWithRetry() {
