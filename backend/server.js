@@ -4,19 +4,25 @@ import mysql from "mysql2";
 const app = express();
 
 const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: "db",
+  user: "root",
+  password: "1234",
+  database: "book_app",
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error("DB 연결 실패:", err);
-  } else {
-    console.log("DB 연결 성공");
-  }
-});
+// 연결 재시도 로직 백엔드가 DB가 준비될 때까지 기다리도록 함
+function connectWithRetry() {
+  db.connect((err) => {
+    if (err) {
+      console.log("❌ DB 연결 실패, 3초 후 재시도...");
+      setTimeout(connectWithRetry, 3000);
+    } else {
+      console.log("✅ DB 연결 성공");
+    }
+  });
+}
+
+connectWithRetry();
 
 app.get("/", (req, res) => {
   res.send("Server running");
