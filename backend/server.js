@@ -3,6 +3,8 @@ import mysql from "mysql2";
 import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 
@@ -10,6 +12,7 @@ app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const API_KEY = "SBNMB4WQG4D9.SILrS5NwNijwKELBoHSLSYTz5dQNgQYG";
 
 app.use(express.static(path.join(__dirname, "Pront")));
 
@@ -58,7 +61,7 @@ app.get("/api/books", async (req, res) => {
   try {
     const response = await axios.get("https://api.sweetbook.com/books", {
       headers: {
-        Authorization: `Bearer YOUR_API_KEY`,
+        Authorization: `Bearer ${API_KEY}`,
       },
     });
 
@@ -86,7 +89,7 @@ app.post("/api/order", async (req, res) => {
       `https://api.sweetbook.com/books/${book_id}`,
       {
         headers: {
-          Authorization: `Bearer YOUR_API_KEY`,
+          Authorization: `Bearer ${API_KEY}`,
         },
       },
     );
