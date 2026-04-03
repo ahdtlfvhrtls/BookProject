@@ -1,30 +1,17 @@
 <!doctype html>
-<html lang="ko">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>My Book Maker</title>
+    <title>책 만들기</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-
   <body>
-    <div class="container">
-      <h1>📚 나만의 책 만들기</h1>
+    <h1>📚 책 만들기</h1>
 
-      <div class="card">
-        <h2>책 생성 & 주문</h2>
+    <input id="title" placeholder="제목" />
+    <textarea id="content" placeholder="내용 입력"></textarea>
 
-        <input id="title" placeholder="책 제목 입력" />
-        <input id="name" placeholder="이름 입력" />
-
-        <button onclick="createOrder()">책 만들고 주문하기</button>
-      </div>
-
-      <div class="card">
-        <h2>📦 주문 목록</h2>
-        <button onclick="loadOrders()">불러오기</button>
-        <ul id="orderList"></ul>
-      </div>
-    </div>
+    <button onclick="createBook()">책 생성</button>
+    <button onclick="goList()">목록 보기</button>
 
     <script src="app.js"></script>
   </body>
