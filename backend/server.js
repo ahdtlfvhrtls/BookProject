@@ -1,29 +1,28 @@
 import express from "express";
 import mysql from "mysql2";
+import { SweetbookClient } from "bookprintapi-nodejs-sdk";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-import { SweetbookClient } from "bookprintapi-nodejs-sdk";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-// 경로 설정
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 정적 파일
+// 프론트 연결
 app.use(express.static(path.join(__dirname, "Pront")));
 
-// Sweetbook
+// SDK
 const client = new SweetbookClient({
   apiKey: process.env.SWEETBOOK_API_KEY,
-  environment: process.env.SWEETBOOK_ENV || "sandbox",
+  environment: "sandbox",
 });
 
-// DB 연결
+// DB
 const db = mysql.createConnection({
   host: "db",
   user: "root",
@@ -31,68 +30,68 @@ const db = mysql.createConnection({
   database: "book_app",
 });
 
-db.connect(() => console.log("DB 연결 성공"));
-
-// 1. 책 생성 + 내용 저장
+// 책 생성
 app.post("/api/books", async (req, res) => {
-  const { title, content } = req.body;
+  const { title, author, content } = req.body;
 
   try {
+    // 1. 책 생성
     const book = await client.books.create({
       bookSpecUid: "SQUAREBOOK_HC",
       title,
       creationType: "TEST",
     });
 
-    // 내용 추가 (핵심)
-    await client.contents.insert(book.bookUid, {
+    const bookUid = book.bookUid;
+
+    // 2. 페이지 추가
+    await client.contents.insert(bookUid, {
       pages: [
         {
-          type: "text",
-          content,
+          type: "TEXT",
+          text: content,
         },
       ],
     });
 
-    // DB 저장
-    db.query(
-      "INSERT INTO books (book_uid, title, content) VALUES (?, ?, ?)",
-      [book.bookUid, title, content],
-      (err, result) => {
-        if (err) return res.status(500).json(err);
+    // 3. finalize
+    await client.books.finalize(bookUid);
 
-        res.json({
-          message: "책 생성 완료",
-          id: result.insertId,
-        });
-      },
-    );
+    // 4. DB 저장
+    const query = `
+      INSERT INTO books (title, author, book_uid, content)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    db.query(query, [title, author, bookUid, content]);
+
+    res.json({ message: "책 생성 완료", bookUid });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "책 생성 실패" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// 2. 책 목록
+// 목록 조회 (DB 기준)
 app.get("/api/books", (req, res) => {
-  db.query("SELECT * FROM books", (err, results) => {
+  db.query("SELECT * FROM books ORDER BY id DESC", (err, results) => {
     if (err) return res.status(500).json(err);
     res.json(results);
   });
 });
 
-// 3. 책 상세
+// 상세 조회
 app.get("/api/books/:id", (req, res) => {
   db.query(
     "SELECT * FROM books WHERE id = ?",
     [req.params.id],
-    (err, results) => {
+    (err, result) => {
       if (err) return res.status(500).json(err);
-      res.json(results[0]);
+      res.json(result[0]);
     },
   );
 });
 
 app.listen(3000, () => {
-  console.log("서버 실행 http://localhost:3000");
+  console.log("서버 실행 3000");
 });
