@@ -1,23 +1,28 @@
 import express from "express";
 import mysql from "mysql2";
-import axios from "axios";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import SweetBook from "bookprintapi-nodejs-sdk";
+
 dotenv.config();
 
 const app = express();
-
 app.use(express.json());
 
+// 경로 설정
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const API_KEY = "SBNMB4WQG4D9.SILrS5NwNijwKELBoHSLSYTz5dQNgQYG";
 
+// 프론트 연결
 app.use(express.static(path.join(__dirname, "Pront")));
 
-// DB 연결 (재시도 포함)
+// ✅ SDK 초기화
+const sweetbook = new SweetBook({
+  apiKey: process.env.API_KEY,
+});
 
+// DB 연결
 let db;
 
 function connectWithRetry() {
@@ -40,7 +45,7 @@ function connectWithRetry() {
 
 connectWithRetry();
 
-// 가격 계산 로직
+// 가격 계산
 const calculatePrice = (basePrice, options = []) => {
   let total = basePrice;
 
@@ -56,50 +61,33 @@ const calculatePrice = (basePrice, options = []) => {
   return total;
 };
 
-// 책 목록 조회 (외부 API)
+// ✅ 책 목록 조회
 app.get("/api/books", async (req, res) => {
   try {
-    const response = await axios.get("https://api.sweetbook.com/books", {
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-      },
-    });
+    const books = await sweetbook.books.list();
 
-    // 필요한 데이터만 가공
-    const books = response.data.map((book) => ({
+    const result = books.map((book) => ({
       id: book.id,
       title: book.title,
       price: book.price,
     }));
 
-    res.json(books);
+    res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "외부 API 실패" });
+    res.status(500).json({ error: "책 조회 실패" });
   }
 });
 
-// 주문 생성
+// ✅ 주문 생성
 app.post("/api/order", async (req, res) => {
   const { book_id, options } = req.body;
 
   try {
-    // 외부 API에서 책 정보 조회
-    const response = await axios.get(
-      `https://api.sweetbook.com/books/${book_id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-        },
-      },
-    );
+    const book = await sweetbook.books.get(book_id);
 
-    const basePrice = response.data.price;
+    const total_price = calculatePrice(book.price, options);
 
-    // 가격 계산
-    const total_price = calculatePrice(basePrice, options);
-
-    // 주문 저장
     const orderQuery = `
       INSERT INTO orders (book_id, total_price, status)
       VALUES (?, ?, 'CREATED')
@@ -110,7 +98,6 @@ app.post("/api/order", async (req, res) => {
 
       const orderId = result.insertId;
 
-      // 옵션 저장
       if (options && options.length > 0) {
         const optionQuery = `
           INSERT INTO order_options (order_id, option_name, option_value)
@@ -134,7 +121,7 @@ app.post("/api/order", async (req, res) => {
   }
 });
 
-// 주문 목록 조회
+// 주문 목록
 app.get("/api/orders", (req, res) => {
   db.query("SELECT * FROM orders", (err, results) => {
     if (err) return res.status(500).json(err);
@@ -142,7 +129,7 @@ app.get("/api/orders", (req, res) => {
   });
 });
 
-// 주문 상세 조회 (JOIN)
+// 주문 상세
 app.get("/api/orders/:id", (req, res) => {
   const orderId = req.params.id;
 
@@ -159,7 +146,7 @@ app.get("/api/orders/:id", (req, res) => {
   });
 });
 
-// 서버 실행
+// 실행
 app.listen(3000, () => {
   console.log("포트3000에서 서버 실행 중...");
 });
