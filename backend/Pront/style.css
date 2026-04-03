@@ -1,21 +1,37 @@
 body {
   font-family: Arial;
   padding: 40px;
+  background: #f5f5f5;
+}
+
+h1 {
+  text-align: center;
+}
+
+.form {
+  background: white;
+  padding: 20px;
+  margin-bottom: 30px;
 }
 
 input,
 textarea {
   display: block;
-  width: 300px;
-  margin: 10px 0;
-}
-
-button {
-  margin: 10px 5px;
+  width: 100%;
+  margin-bottom: 10px;
   padding: 10px;
 }
 
-a {
-  display: block;
-  margin: 10px 0;
+button {
+  padding: 10px;
+  background: black;
+  color: white;
+  cursor: pointer;
+}
+
+.book {
+  background: white;
+  margin-bottom: 10px;
+  padding: 10px;
+  cursor: pointer;
 }
