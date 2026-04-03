@@ -45,7 +45,8 @@ app.post("/api/books", async (req, res) => {
     const bookUid = book.bookUid;
 
     // 2. 페이지 추가
-    await client.contents.insert(bookUid, {
+    await client.contents.insert({
+      bookUid: bookUid,
       pages: [
         {
           type: "TEXT",
