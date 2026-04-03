@@ -36,7 +36,7 @@ function connectWithRetry() {
 
   db.connect((err) => {
     if (err) {
-      console.log("❌ DB 연결 실패, 3초 후 재시도...");
+      console.log("DB 연결 실패, 3초 후 재시도...");
       setTimeout(connectWithRetry, 3000);
     } else {
       console.log("DB 연결 성공");
