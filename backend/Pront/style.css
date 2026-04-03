@@ -1,60 +1,21 @@
 body {
-  font-family: "Arial";
-  background: linear-gradient(135deg, #74ebd5, #acb6e5);
-  margin: 0;
-  padding: 0;
+  font-family: Arial;
+  padding: 40px;
 }
 
-.container {
-  width: 500px;
-  margin: 50px auto;
-}
-
-h1 {
-  text-align: center;
-  color: white;
-}
-
-.card {
-  background: white;
-  padding: 20px;
-  margin-top: 20px;
-  border-radius: 15px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-input {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+input,
+textarea {
+  display: block;
+  width: 300px;
+  margin: 10px 0;
 }
 
 button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 15px;
-  border: none;
-  background: #4caf50;
-  color: white;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-button:hover {
-  background: #45a049;
-}
-
-ul {
-  list-style: none;
-  padding: 0;
-}
-
-li {
-  background: #f1f1f1;
+  margin: 10px 5px;
   padding: 10px;
-  margin-top: 8px;
-  border-radius: 8px;
+}
+
+a {
+  display: block;
+  margin: 10px 0;
 }
