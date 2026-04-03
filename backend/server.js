@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 // 프론트 연결
 app.use(express.static(path.join(__dirname, "Pront")));
 
-// ✅ SDK 초기화
+// SDK 초기화
 const sweetbook = new SweetBook({
   apiKey: process.env.API_KEY,
 });
@@ -38,7 +38,7 @@ function connectWithRetry() {
       console.log("❌ DB 연결 실패, 3초 후 재시도...");
       setTimeout(connectWithRetry, 3000);
     } else {
-      console.log("✅ DB 연결 성공");
+      console.log("DB 연결 성공");
     }
   });
 }
