@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 // 프론트 연결
 app.use(express.static(path.join(__dirname, "Pront")));
 
-// ✅ SDK 초기화
+// SDK 초기화
 const client = new SweetbookClient({
   apiKey: process.env.SWEETBOOK_API_KEY,
   environment: "sandbox",
@@ -39,14 +39,14 @@ function connectWithRetry() {
       console.log("❌ DB 연결 실패, 3초 후 재시도...");
       setTimeout(connectWithRetry, 3000);
     } else {
-      console.log("✅ DB 연결 성공");
+      console.log("DB 연결 성공");
     }
   });
 }
 
 connectWithRetry();
 
-// ✅ 책 생성 + 주문
+// 책 생성 + 주문
 app.post("/api/order", async (req, res) => {
   try {
     // 1. 책 생성
