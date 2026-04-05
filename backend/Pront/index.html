@@ -1,23 +1,17 @@
 <!doctype html>
-<html lang="ko">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>Book Service</title>
-    <link rel="stylesheet" href="style.css" />
+    <title>책 목록</title>
+    <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
-    <h1>📚 나만의 책 만들기</h1>
+    <div class="container">
+      <h1>📚 책 목록</h1>
+      <a href="create.html">+ 새 책</a>
 
-    <div class="form">
-      <input id="title" placeholder="제목" />
-      <input id="author" placeholder="저자" />
-      <textarea id="content" placeholder="내용"></textarea>
-      <button onclick="createBook()">책 생성</button>
+      <div id="list"></div>
     </div>
 
-    <h2>📖 책 목록</h2>
-    <div id="list"></div>
-
-    <script src="app.js"></script>
+    <script src="js/list.js"></script>
   </body>
 </html>
