@@ -1,10 +1,12 @@
 import express from "express";
 import mysql from "mysql2";
 import multer from "multer";
-import { SweetbookClient } from "bookprintapi-nodejs-sdk";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import axios from "axios";
+import fs from "fs";
+import FormData from "form-data";
 
 dotenv.config();
 
@@ -14,8 +16,7 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 정적 파일
-app.use(express.static(path.join(__dirname, "Pront")));
+// 정적
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // multer
@@ -25,12 +26,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// SDK
-const client = new SweetbookClient({
-  apiKey: process.env.SWEETBOOK_API_KEY,
-  environment: "sandbox",
-});
-
 // DB
 const db = mysql.createConnection({
   host: "db",
@@ -39,84 +34,229 @@ const db = mysql.createConnection({
   database: "book_app",
 });
 
-// 책 생성
+// 🔥 핵심 API
 app.post("/api/books", upload.array("images"), async (req, res) => {
   try {
+    console.log("🔥 시작");
+
     const { title, author, pages } = req.body;
     const parsedPages = JSON.parse(pages);
-    const files = req.files;
 
-    // 1. 책 생성
-    const book = await client.books.create({
-      bookSpecUid: "SQUAREBOOK_HC",
-      title,
-      creationType: "TEST",
-    });
+    /** =====================
+     * 1️⃣ 책 생성
+     ====================== */
+    console.log("1️⃣ 책 생성");
 
-    const bookUid = book.bookUid;
+    const bookRes = await axios.post(
+      "https://api-sandbox.sweetbook.com/v1/books",
+      {
+        title,
+        bookSpecUid: "SQUAREBOOK_HC",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+        },
+      },
+    );
 
-    // 2. 표지
-    await client.covers.create(bookUid, "79yjMH3qRPly", {
-      coverPhoto: `http://localhost:3000/uploads/${files[0].filename}`,
-      title,
-      dateRange: "2026.04",
-    });
+    const bookUid = bookRes.data.data.bookUid;
+    console.log("bookUid:", bookUid);
 
-    // 3. 간지 (챕터)
-    await client.contents.insert(bookUid, "5M3oo7GlWKGO", {
-      chapterNum: "01",
-      year: "2026",
-      monthTitle: "4월의 기록",
-    });
+    /** =====================
+     * 2️⃣ 사진 업로드
+     ====================== */
+    console.log("2️⃣ 사진 업로드");
 
-    // 4. 내지 (핵심)
-    for (let i = 0; i < parsedPages.length; i++) {
-      const page = parsedPages[i];
+    const uploadedPhotos = [];
 
-      const imageUrl = `http://localhost:3000/uploads/${files[i].filename}`;
+    for (const file of req.files) {
+      const form = new FormData();
+      form.append("file", fs.createReadStream(file.path));
 
-      await client.contents.insert(bookUid, "46VqZhVNOfAp", {
-        monthNum: "04",
-        dayNum: String(i + 1).padStart(2, "0"),
-        diaryText: page.text,
-        photo: imageUrl,
-      });
+      const uploadRes = await axios.post(
+        `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/photos`,
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+            ...form.getHeaders(),
+          },
+        },
+      );
+
+      uploadedPhotos.push(uploadRes.data.data.fileName);
     }
 
-    // 5. 발행면
-    await client.contents.insert(bookUid, "5nh0VBjtnIVE", {
-      photo: `http://localhost:3000/uploads/${files[0].filename}`,
-      title,
-      publishDate: "2026년 4월 5일",
-      author,
-      hashtags: "#일기 #기록",
-      publisher: "My App",
-    });
+    console.log("업로드된 사진:", uploadedPhotos);
 
-    // 6. finalize
-    await client.books.finalize(bookUid);
+    /** =====================
+     * 3️⃣ 표지
+     ====================== */
+    console.log("3️⃣ 표지");
 
-    res.json({ message: "책 생성 완료", bookUid });
+    const coverForm = new FormData();
+    coverForm.append("templateUid", "79yjMH3qRPly");
+    coverForm.append(
+      "parameters",
+      JSON.stringify({
+        title,
+        coverPhoto: uploadedPhotos[0],
+      }),
+    );
+
+    await axios.post(
+      `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/cover`,
+      coverForm,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+          ...coverForm.getHeaders(),
+        },
+      },
+    );
+
+    /** =====================
+     * 4️⃣ 간지
+     ====================== */
+    console.log("4️⃣ 간지");
+
+    await axios.post(
+      `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/contents?breakBefore=page`,
+      {
+        templateUid: "5M3oo7GlWKGO",
+        parameters: {
+          chapterNum: "01",
+          year: "2026",
+          monthTitle: "4월의 기록",
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+        },
+      },
+    );
+
+    /** =====================
+     * 5️⃣ 내지 (페이지 채우기)
+     ====================== */
+    console.log("5️⃣ 내지");
+
+    let pageCount = 0;
+
+    while (pageCount < 22) {
+      // A
+      await axios.post(
+        `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/contents`,
+        {
+          templateUid: "46VqZhVNOfAp",
+          parameters: {
+            monthNum: "04",
+            dayNum: String(pageCount + 1).padStart(2, "0"),
+            diaryText: parsedPages[pageCount]?.text || "내용",
+            photo: uploadedPhotos[pageCount % uploadedPhotos.length],
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+          },
+        },
+      );
+
+      pageCount++;
+      if (pageCount >= 22) break;
+
+      // B
+      await axios.post(
+        `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/contents`,
+        {
+          templateUid: "5B4ds6i0Rywx",
+          parameters: {
+            monthNum: "04",
+            dayNum: String(pageCount + 1).padStart(2, "0"),
+            diaryText: parsedPages[pageCount]?.text || "내용",
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+          },
+        },
+      );
+
+      pageCount++;
+      if (pageCount >= 22) break;
+
+      // Gallery
+      await axios.post(
+        `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/contents`,
+        {
+          templateUid: "6c2HU8tipz1l",
+          parameters: {
+            monthNum: "04",
+            dayNum: String(pageCount + 1).padStart(2, "0"),
+            collagePhotos: uploadedPhotos.slice(0, 3),
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+          },
+        },
+      );
+
+      pageCount++;
+    }
+
+    /** =====================
+     * 6️⃣ 발행면
+     ====================== */
+    console.log("6️⃣ 발행면");
+
+    await axios.post(
+      `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/contents?breakBefore=page`,
+      {
+        templateUid: "5nhOVBjTnIVE",
+        parameters: {
+          photo: uploadedPhotos[0],
+          title,
+          publishDate: "2026년 4월 5일",
+          author,
+          hashtags: "#일기",
+          publisher: "My App",
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+        },
+      },
+    );
+
+    /** =====================
+     * 7️⃣ finalize
+     ====================== */
+    console.log("7️⃣ finalize");
+
+    const finalRes = await axios.post(
+      `https://api-sandbox.sweetbook.com/v1/books/${bookUid}/finalization`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+        },
+      },
+    );
+
+    console.log("완료:", finalRes.data);
+
+    res.json({ success: true, bookUid });
   } catch (err) {
-    console.error("에러:", err.response?.data || err.message);
-    res.status(500).json({ error: err.message });
+    console.error("❌ 에러:", err.response?.data || err.message);
+    res.status(500).json(err.response?.data || { error: err.message });
   }
-});
-
-// 목록
-app.get("/api/books", (req, res) => {
-  db.query("SELECT * FROM books ORDER BY id DESC", (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.json(results);
-  });
-});
-
-// 상세
-app.get("/api/books/:id", (req, res) => {
-  db.query("SELECT * FROM books WHERE id=?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json(result[0]);
-  });
 });
 
 app.listen(3000, () => console.log("서버 실행 3000"));
