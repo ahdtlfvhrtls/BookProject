@@ -102,6 +102,7 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
       JSON.stringify({
         title,
         coverPhoto: uploadedPhotos[0],
+        dateRange: "2026.04",
       }),
     );
 
