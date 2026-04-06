@@ -224,6 +224,34 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
     );
 
     console.log("🎉 완료");
+    console.log("7️⃣ finalize");
+
+    await axios.post(
+      `${API}/books/${bookUid}/finalization`,
+      {},
+      { headers: HEADERS },
+    );
+
+    console.log("🎉 완료");
+
+    // DB 저장
+    await new Promise((resolve, reject) => {
+      db.query(
+        "INSERT INTO books (book_uid, title, author, status) VALUES (?, ?, ?, ?)",
+        [bookUid, title, author, "finalized"],
+        (err) => {
+          if (err) {
+            console.error("DB 저장 실패:", err);
+            reject(err);
+          } else {
+            console.log("DB 저장 완료");
+            resolve();
+          }
+        },
+      );
+    });
+
+    res.json({ success: true, bookUid });
 
     res.json({ success: true, bookUid });
   } catch (err) {
