@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 
 // multer (이미지 업로드)
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // API 기본 설정
 const API = "https://api-sandbox.sweetbook.com/v1";
