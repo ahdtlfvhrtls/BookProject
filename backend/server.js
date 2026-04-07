@@ -17,7 +17,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 const pool = mysql.createPool({
   host: "localhost",
   user: "root",
-  password: "password",
+  password: "1234",
   database: "book_app",
 });
 
@@ -70,7 +70,7 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
       JSON.stringify({
         title,
         dateRange: "2026.04",
-        coverPhoto: uploadedPhotos[0],
+        coverPhoto: uploadedPhotos[0] || "test.jpg",
       }),
     );
 
@@ -371,6 +371,19 @@ app.delete("/api/books/:bookUid", async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json(err.message);
+  }
+});
+
+app.get("/api/books", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY created_at DESC",
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
     res.status(500).json(err.message);
   }
 });
