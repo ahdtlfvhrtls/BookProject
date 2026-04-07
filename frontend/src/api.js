@@ -9,11 +9,18 @@ export const getBook = async (id) => {
 };
 
 export const createBook = async (data) => {
-  await fetch("/api/books", {
+  const formData = new FormData();
+
+  formData.append("title", data.title);
+  formData.append("author", data.author);
+  formData.append("pages", JSON.stringify(data.pages));
+
+  const res = await fetch("/api/books", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: formData,
   });
+
+  return res.json();
 };
 
 export const deleteBook = async (id) => {
