@@ -15,8 +15,16 @@ export const createBook = async (data) => {
   formData.append("author", data.author);
   formData.append("pages", JSON.stringify(data.pages));
 
-  data.images.forEach((img) => {
-    formData.append("images", img);
+  // 커버 이미지
+  if (data.cover) {
+    formData.append("cover", data.cover);
+  }
+
+  // 페이지 이미지
+  data.pages.forEach((page, i) => {
+    if (page.image) {
+      formData.append("images", page.image);
+    }
   });
 
   const res = await fetch("/api/books", {

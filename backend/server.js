@@ -28,7 +28,7 @@ const HEADERS = {
 };
 
 // 1. 책 생성 (SweetBook + DB 저장)
-app.post("/api/books", upload.array("images"), async (req, res) => {
+app.post("/api/books", upload.any(), async (req, res) => {
   let conn;
 
   try {
@@ -47,19 +47,35 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
     const bookUid = bookRes.data.data.bookUid;
 
     // 2️. 이미지 업로드
-    const uploadedPhotos = [];
+    const coverFile = req.files.find((f) => f.fieldname === "cover");
+    const pageFiles = req.files.filter((f) => f.fieldname === "images");
 
-    for (const file of req.files) {
+    const uploadImage = async (file) => {
       const form = new FormData();
       form.append("file", file.buffer, file.originalname);
 
-      const uploadRes = await axios.post(
-        `${API}/books/${bookUid}/photos`,
-        form,
-        { headers: { ...HEADERS, ...form.getHeaders() } },
-      );
+      const res = await axios.post(`${API}/books/${bookUid}/photos`, form, {
+        headers: { ...HEADERS, ...form.getHeaders() },
+      });
 
-      uploadedPhotos.push(uploadRes.data.data?.fileName);
+      return res.data.data.fileName;
+    };
+
+    // cover
+    const coverFileName = coverFile ? await uploadImage(coverFile) : null;
+
+    // pages
+    const uploadedPhotos = [];
+    for (const file of pageFiles) {
+      const name = await uploadImage(file);
+      uploadedPhotos.push(name);
+    }
+
+    if (!coverFileName && uploadedPhotos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "이미지 최소 1개 필요",
+      });
     }
 
     // 3️. 표지
@@ -70,7 +86,7 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
       JSON.stringify({
         title,
         dateRange: "2026.04",
-        coverPhoto: uploadedPhotos[0] || "test.jpg",
+        coverPhoto: coverFileName || uploadedPhotos[0],
       }),
     );
 
@@ -159,9 +175,9 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
     await conn.beginTransaction();
 
     await conn.query(
-      `INSERT INTO books (book_uid, title, author)
-       VALUES (?, ?, ?)`,
-      [bookUid, title, author],
+      `INSERT INTO books (book_uid, title, author, cover_image)
+   VALUES (?, ?, ?, ?)`,
+      [bookUid, title, author, coverFileName || uploadedPhotos[0]],
     );
 
     const values = parsedPages.map((page, i) => [

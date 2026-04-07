@@ -7,44 +7,46 @@ export default function BookEditor() {
 
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
-  const [pages, setPages] = useState([{ text: "" }]);
+  const [pages, setPages] = useState([{ text: "", image: null }]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [images, setImages] = useState([]);
+  const [cover, setCover] = useState(null);
 
+  // 페이지 내용 변경
   const handlePageChange = (value) => {
     const newPages = [...pages];
     newPages[currentPage].text = value;
     setPages(newPages);
   };
 
+  // 페이지 이미지 변경
+  const handlePageImageChange = (e) => {
+    const file = e.target.files[0];
+    const newPages = [...pages];
+    newPages[currentPage].image = file;
+    setPages(newPages);
+  };
+
   const addPage = () => {
-    setPages([...pages, { text: "" }]);
+    setPages([...pages, { text: "", image: null }]);
     setCurrentPage(pages.length);
   };
 
   const removePage = (index) => {
     if (pages.length === 1) return;
-
     const newPages = pages.filter((_, i) => i !== index);
     setPages(newPages);
-
-    if (currentPage >= newPages.length) {
-      setCurrentPage(newPages.length - 1);
-    }
+    if (currentPage >= newPages.length) setCurrentPage(newPages.length - 1);
   };
 
-  const handleImageChange = (e) => {
-    setImages([...e.target.files]);
-  };
-
+  // 제출
   const handleSubmit = async () => {
     if (!title || !author) {
       alert("제목과 작성자를 입력해주세요");
       return;
     }
 
-    if (images.length === 0) {
-      alert("이미지 최소 1개 필요");
+    if (!cover && pages.every((p) => !p.image)) {
+      alert("표지 또는 페이지 이미지 최소 1개 필요");
       return;
     }
 
@@ -52,8 +54,8 @@ export default function BookEditor() {
       const res = await createBook({
         title,
         author,
-        pages,
-        images,
+        cover, // 커버 이미지
+        pages, // 페이지별 텍스트 + 이미지 포함
       });
 
       if (res.success) {
@@ -97,9 +99,10 @@ export default function BookEditor() {
           />
         </div>
 
+        {/* 표지 이미지 */}
         <div className="form-group">
           <label>표지 이미지 업로드 (최소 1개)</label>
-          <input type="file" multiple onChange={handleImageChange} />
+          <input type="file" onChange={(e) => setCover(e.target.files[0])} />
         </div>
       </div>
 
@@ -125,6 +128,12 @@ export default function BookEditor() {
         onChange={(e) => handlePageChange(e.target.value)}
         placeholder="내용을 입력하세요..."
       />
+
+      {/* 페이지 이미지 업로드 */}
+      <div className="form-group" style={{ marginTop: "10px" }}>
+        <label>이 페이지 이미지 업로드 (선택)</label>
+        <input type="file" onChange={handlePageImageChange} />
+      </div>
 
       {/* 하단 버튼 */}
       <div className="editor-actions">

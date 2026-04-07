@@ -26,7 +26,16 @@ export default function BookList() {
             className="card"
             onClick={() => navigate(`/books/${b.book_uid}`)}
           >
-            <div className="thumb">{!b.image_url && "이미지 없음"}</div>
+            <div className="thumb">
+              {b.cover_image ? (
+                <img
+                  src={b.cover_image}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                "이미지 없음"
+              )}
+            </div>
 
             <div className="card-content">
               <h3>{b.title}</h3>
