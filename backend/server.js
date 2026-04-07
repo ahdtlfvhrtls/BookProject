@@ -190,13 +190,18 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
 });
 
 // 2. 책 조회 (DB 기준)
-app.get("/api/books/:bookUid", async (req, res) => {
+app.get("/api/books/:bookUid/detail", async (req, res) => {
   const { bookUid } = req.params;
 
   try {
-    const [book] = await pool.query(`SELECT * FROM books WHERE book_uid = ?`, [
-      bookUid,
-    ]);
+    const [book] = await pool.query(
+      `SELECT * FROM books WHERE book_uid = ? AND deleted_at IS NULL`,
+      [bookUid],
+    );
+
+    if (book.length === 0) {
+      return res.status(404).json({ error: "not found" });
+    }
 
     const [pages] = await pool.query(
       `SELECT page_number, text, image_url
@@ -206,13 +211,16 @@ app.get("/api/books/:bookUid", async (req, res) => {
       [bookUid],
     );
 
-    if (book.length === 0) {
-      return res.status(404).json({ error: "not found" });
-    }
+    // 주문 여부까지 확인
+    const [orders] = await pool.query(
+      `SELECT id, status FROM orders WHERE book_uid = ?`,
+      [bookUid],
+    );
 
     res.json({
       book: book[0],
       pages,
+      orders,
     });
   } catch (err) {
     res.status(500).json(err.message);
