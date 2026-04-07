@@ -1,7 +1,7 @@
 body {
   margin: 0;
+  background: #f5f7fb;
   font-family: sans-serif;
-  background: #fafafa;
 }
 
 .container {
@@ -10,22 +10,73 @@ body {
   padding: 40px;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #4f46e5;
+  color: white;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 20px;
+  margin-top: 30px;
 }
 
 .card {
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 16px;
   background: white;
-  cursor: pointer;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.thumb {
+  height: 150px;
+  background: #ddd;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.editor {
+  max-width: 800px;
+  margin: 40px auto;
 }
 
 textarea {
   width: 100%;
   height: 300px;
+  margin-top: 20px;
   padding: 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+.page-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.page-buttons .active {
+  background: black;
+}
+
+.viewer {
+  max-width: 800px;
+  margin: 40px auto;
+}
+
+.page-content {
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 10px;
 }

@@ -13,7 +13,7 @@ export default function BookList() {
   return (
     <div className="container">
       <div className="header">
-        <h2>📚 책 목록</h2>
+        <h1>📚 My Book</h1>
         <button onClick={() => navigate("/books/new")}>+ 책 만들기</button>
       </div>
 

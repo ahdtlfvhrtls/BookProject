@@ -9,12 +9,11 @@ export const getBook = async (id) => {
 };
 
 export const createBook = async (data) => {
-  const res = await fetch("/api/books", {
+  await fetch("/api/books", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return res.json();
 };
 
 export const deleteBook = async (id) => {
