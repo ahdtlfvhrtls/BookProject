@@ -21,7 +21,7 @@ export default function BookEditor() {
     await createBook({
       title: book.title,
       author: book.author,
-      pages: JSON.stringify(book.pages),
+      pages: book.pages,
     });
 
     navigate("/");
