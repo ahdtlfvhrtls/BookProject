@@ -12,7 +12,7 @@ export default function BookList() {
 
   return (
     <div className="container">
-      <div className="header">
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
         <h1>📚 My Book</h1>
         <button className="create-btn" onClick={() => navigate("/books/new")}>
           + 책 만들기
@@ -26,9 +26,7 @@ export default function BookList() {
             className="card"
             onClick={() => navigate(`/books/${b.book_uid}`)}
           >
-            <div className="thumb">
-              <div className="overlay">열기</div>
-            </div>
+            <div className="thumb">{!b.image_url && "이미지 없음"}</div>
 
             <div className="card-content">
               <h3>{b.title}</h3>

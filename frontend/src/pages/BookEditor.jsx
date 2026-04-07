@@ -3,85 +3,109 @@ import { useNavigate } from "react-router-dom";
 import { createBook } from "../api";
 
 export default function BookEditor() {
-  const [book, setBook] = useState({
-    title: "",
-    author: "",
-    pages: [{ text: "" }],
-  });
-
-  const [currentPage, setCurrentPage] = useState(0);
   const navigate = useNavigate();
 
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [pages, setPages] = useState([{ text: "" }]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [images, setImages] = useState([]);
+
+  const handlePageChange = (value) => {
+    const newPages = [...pages];
+    newPages[currentPage].text = value;
+    setPages(newPages);
+  };
+
+  const addPage = () => {
+    setPages([...pages, { text: "" }]);
+    setCurrentPage(pages.length);
+  };
+
+  const removePage = (index) => {
+    if (pages.length === 1) return;
+
+    const newPages = pages.filter((_, i) => i !== index);
+    setPages(newPages);
+
+    if (currentPage >= newPages.length) {
+      setCurrentPage(newPages.length - 1);
+    }
+  };
+
+  const handleImageChange = (e) => {
+    setImages([...e.target.files]);
+  };
+
   const handleSubmit = async () => {
-    if (!book.title || !book.author) {
+    if (!title || !author) {
       alert("제목과 작성자를 입력해주세요");
       return;
     }
 
-    await createBook({
-      title: book.title,
-      author: book.author,
-      pages: book.pages,
-    });
-
-    navigate("/");
-  };
-
-  const addPage = () => {
-    setBook({
-      ...book,
-      pages: [...book.pages, { text: "" }],
-    });
-  };
-
-  const deletePage = () => {
-    if (book.pages.length === 1) {
-      alert("최소 1페이지는 필요합니다");
+    if (images.length === 0) {
+      alert("이미지 최소 1개 필요");
       return;
     }
 
-    const newPages = book.pages.filter((_, i) => i !== currentPage);
+    try {
+      const res = await createBook({
+        title,
+        author,
+        pages,
+        images,
+      });
 
-    setBook({ ...book, pages: newPages });
-    setCurrentPage(0);
+      if (res.success) {
+        alert("책 생성 완료!");
+        navigate("/");
+      } else {
+        alert("생성 실패");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("에러 발생");
+    }
   };
 
   return (
     <div className="editor">
-      <h2>📖 책 만들기</h2>
+      <h1>📚 책 만들기</h1>
 
-      {/* 🔥 안내문 */}
+      {/* 안내문 */}
       <div className="notice">
-        <p>📌 안내</p>
-        <p>• 표지, 간지, 발행 페이지는 자동으로 생성됩니다.</p>
-        <p>• 현재는 본문(내지) 내용만 작성하면 됩니다.</p>
-        <p>• 페이지 수가 부족하면 자동으로 채워져 책이 완성됩니다.</p>
+        본문 내용만 입력하면 나머지 표지/간지/발행면은 자동으로 생성됩니다.
       </div>
 
-      {/* 🔥 입력 폼 */}
+      {/* 입력 영역 */}
       <div className="form">
         <div className="form-group">
           <label>제목</label>
           <input
-            placeholder="책 제목을 입력하세요"
-            value={book.title}
-            onChange={(e) => setBook({ ...book, title: e.target.value })}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="제목 입력"
           />
         </div>
 
         <div className="form-group">
           <label>작성자</label>
           <input
-            placeholder="작성자 이름"
-            value={book.author}
-            onChange={(e) => setBook({ ...book, author: e.target.value })}
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            placeholder="작성자 입력"
           />
+        </div>
+
+        <div className="form-group">
+          <label>표지 이미지 업로드 (최소 1개)</label>
+          <input type="file" multiple onChange={handleImageChange} />
         </div>
       </div>
 
-      {/* 🔥 페이지 버튼 */}
+      {/* 페이지 버튼 */}
       <div className="page-buttons">
-        {book.pages.map((_, i) => (
+        {pages.map((_, i) => (
           <button
             key={i}
             className={i === currentPage ? "active" : ""}
@@ -90,31 +114,26 @@ export default function BookEditor() {
             {i + 1}
           </button>
         ))}
-
         <button className="add" onClick={addPage}>
           +
         </button>
       </div>
 
-      {/* 🔥 본문 작성 */}
+      {/* 본문 */}
       <textarea
-        placeholder="페이지 내용을 입력하세요..."
-        value={book.pages[currentPage].text}
-        onChange={(e) => {
-          const copy = [...book.pages];
-          copy[currentPage].text = e.target.value;
-          setBook({ ...book, pages: copy });
-        }}
+        value={pages[currentPage].text}
+        onChange={(e) => handlePageChange(e.target.value)}
+        placeholder="내용을 입력하세요..."
       />
 
-      {/* 🔥 버튼 영역 */}
+      {/* 하단 버튼 */}
       <div className="editor-actions">
-        <button className="delete-page" onClick={deletePage}>
+        <button className="delete-page" onClick={() => removePage(currentPage)}>
           페이지 삭제
         </button>
 
         <button className="submit" onClick={handleSubmit}>
-          책 생성 완료
+          작성 완료
         </button>
       </div>
     </div>

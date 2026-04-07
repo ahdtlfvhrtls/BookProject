@@ -59,7 +59,7 @@ app.post("/api/books", upload.array("images"), async (req, res) => {
         { headers: { ...HEADERS, ...form.getHeaders() } },
       );
 
-      uploadedPhotos.push(uploadRes.data.data.fileName);
+      uploadedPhotos.push(uploadRes.data.data?.fileName);
     }
 
     // 3️. 표지

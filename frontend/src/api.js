@@ -3,8 +3,8 @@ export const getBooks = async () => {
   return res.json();
 };
 
-export const getBook = async (id) => {
-  const res = await fetch(`/api/books/${id}`);
+export const getBook = async (bookUid) => {
+  const res = await fetch(`/api/books/${bookUid}/detail`);
   return res.json();
 };
 
@@ -15,6 +15,10 @@ export const createBook = async (data) => {
   formData.append("author", data.author);
   formData.append("pages", JSON.stringify(data.pages));
 
+  data.images.forEach((img) => {
+    formData.append("images", img);
+  });
+
   const res = await fetch("/api/books", {
     method: "POST",
     body: formData,
@@ -23,14 +27,14 @@ export const createBook = async (data) => {
   return res.json();
 };
 
-export const deleteBook = async (id) => {
-  await fetch(`/api/books/${id}`, { method: "DELETE" });
+export const deleteBook = async (bookUid) => {
+  await fetch(`/api/books/${bookUid}`, { method: "DELETE" });
 };
 
-export const orderBook = async (book_uid) => {
+export const orderBook = async (bookUid) => {
   await fetch("/api/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ book_uid }),
+    body: JSON.stringify({ book_uid: bookUid }),
   });
 };
