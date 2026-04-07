@@ -305,4 +305,74 @@ app.get("/api/orders", async (req, res) => {
   }
 });
 
+// 6. 책 수정 (기존 책을 복제 + 새로 생성 방식)
+app.post("/api/books/:bookUid/remake", async (req, res) => {
+  const { bookUid } = req.params;
+
+  try {
+    // 1️⃣ 기존 데이터 조회
+    const [bookRows] = await pool.query(
+      `SELECT * FROM books WHERE book_uid = ?`,
+      [bookUid],
+    );
+
+    if (bookRows.length === 0) {
+      return res.status(404).json({ error: "book not found" });
+    }
+
+    const [pages] = await pool.query(
+      `SELECT text FROM book_pages WHERE book_uid = ? ORDER BY page_number`,
+      [bookUid],
+    );
+
+    const originalBook = bookRows[0];
+
+    // 2️⃣ 수정 데이터 반영 (req.body로 덮어쓰기)
+    const newTitle = req.body.title || originalBook.title;
+    const newAuthor = req.body.author || originalBook.author;
+
+    const newPages = req.body.pages || pages.map((p) => ({ text: p.text }));
+
+    // 3️⃣ 기존 생성 API 재사용 (핵심)
+    // 내부적으로 /api/books 로직을 함수로 빼는 게 베스트지만
+    // 여기선 간단히 다시 호출하는 방식
+
+    const response = await axios.post("http://localhost:3000/api/books", {
+      title: newTitle,
+      author: newAuthor,
+      pages: JSON.stringify(newPages),
+    });
+
+    const newBookUid = response.data.bookUid;
+
+    // 4️⃣ 기존 책 soft delete
+    await pool.query(`UPDATE books SET deleted_at = NOW() WHERE book_uid = ?`, [
+      bookUid,
+    ]);
+
+    res.json({
+      success: true,
+      newBookUid,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err.message);
+  }
+});
+
+// 7. 책 삭제 (Soft Delete)
+app.delete("/api/books/:bookUid", async (req, res) => {
+  const { bookUid } = req.params;
+
+  try {
+    await pool.query(`UPDATE books SET deleted_at = NOW() WHERE book_uid = ?`, [
+      bookUid,
+    ]);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json(err.message);
+  }
+});
+
 app.listen(3000, () => console.log("🚀 서버 실행 3000"));
