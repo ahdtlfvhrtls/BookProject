@@ -14,7 +14,9 @@ export default function BookList() {
     <div className="container">
       <div className="header">
         <h1>📚 My Book</h1>
-        <button onClick={() => navigate("/books/new")}>+ 책 만들기</button>
+        <button className="create-btn" onClick={() => navigate("/books/new")}>
+          + 책 만들기
+        </button>
       </div>
 
       <div className="grid">
@@ -24,9 +26,14 @@ export default function BookList() {
             className="card"
             onClick={() => navigate(`/books/${b.book_uid}`)}
           >
-            <div className="thumb"></div>
-            <h3>{b.title}</h3>
-            <p>{b.author}</p>
+            <div className="thumb">
+              <div className="overlay">열기</div>
+            </div>
+
+            <div className="card-content">
+              <h3>{b.title}</h3>
+              <p>{b.author}</p>
+            </div>
           </div>
         ))}
       </div>
