@@ -86,7 +86,12 @@ export default function BookDetail() {
           </button>
         </div>
         <div className="right-buttons">
-          <button className="order-btn">주문</button>
+          <button
+            className="order-btn"
+            onClick={() => navigate(`/order/${id}`)}
+          >
+            주문
+          </button>
         </div>
       </div>
     </div>

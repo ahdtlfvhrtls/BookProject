@@ -622,3 +622,378 @@ textarea {
     margin: 0 0 20px auto; /* 컨테이너 안 오른쪽 상단으로 자동 조정 */
   }
 }
+
+/* 헤더 영역 정렬 */
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+/* 새 책 만들기 버튼 */
+.create-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1); /* 그라데이션 포인트 */
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3); /* 푸른색 그림자 */
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  transform: translateY(-3px); /* 위로 살짝 들림 */
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+  filter: brightness(1.1);
+}
+
+.create-btn:active {
+  transform: translateY(0);
+}
+
+.plus-icon {
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* 헤더 제목 스타일도 살짝 수정 */
+.list-header h2 {
+  font-size: 30px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* 컨테이너 */
+.order-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* 상단 버튼 */
+.back-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* 섹션 타이틀 */
+.order-section-title {
+  border-bottom: 2px solid #333;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+/* 입력 폼 */
+.order-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.order-label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #444;
+}
+
+.order-input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+}
+
+.address-search-btn {
+  padding: 0 20px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* 결제 카드 (오른쪽) */
+.payment-summary-card {
+  width: 380px;
+  background: #f8fafc;
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  position: sticky;
+  top: 20px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.total-amount-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 20px;
+  color: #4f46e5;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.main-order-btn {
+  width: 100%;
+  padding: 20px;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 30px;
+  cursor: pointer;
+}
+
+/* 주문 목록 카드 */
+.order-list-card {
+  display: flex;
+  padding: 30px;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* 메인 네비게이션 바 정렬 */
+.main-nav-bar {
+  display: flex;
+  justify-content: flex-start; /* 왼쪽 정렬 */
+  gap: 12px;
+  margin-bottom: 30px;
+  padding: 0 20px;
+}
+
+/* 버튼 공통 스타일 */
+.nav-btn {
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 새 책 만들기 버튼 (보라색) */
+.btn-primary {
+  background-color: #4f46e5;
+  color: white;
+}
+.btn-primary:hover {
+  background-color: #4338ca;
+}
+
+/* 주문 내역 버튼 (회색 테두리) */
+.btn-outline {
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+.btn-outline:hover {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* 주문 내역 페이지 레이아웃 */
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.empty-msg {
+  text-align: center;
+  padding: 100px;
+  color: #64748b;
+}
+
+/* 주문 카드 디자인 */
+.order-list-card {
+  display: flex;
+  padding: 30px;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 20px;
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.order-info {
+  flex: 1;
+}
+
+.order-item-name {
+  margin: 15px 0 5px 0;
+  font-size: 18px;
+}
+
+.order-uid {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* 상태 배지 */
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-pending {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.status-complete {
+  background: #dcfce7;
+  color: #166534;
+}
+
+/* 우측 가격 정보 */
+.order-price-info {
+  text-align: right;
+}
+
+.order-price {
+  font-weight: bold;
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+
+.order-date {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 버튼 */
+.search-btn {
+  padding: 12px 24px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* 카드 클릭 효과 */
+.order-list-card.selectable {
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.order-list-card.selectable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* 취소 버튼 스타일 */
+.cancel-btn {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #ff4d4f;
+  color: #ff4d4f;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #fff1f0;
+}
+
+/* 기존 CSS 보강 */
+.order-price-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.detail-section {
+  margin-top: 20px;
+}
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.detail-table th {
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  width: 120px;
+  color: #666;
+}
+.detail-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+.total-row th,
+.total-row td {
+  font-weight: bold;
+  color: #4f46e5;
+  font-size: 1.2rem;
+}
+
+.full-cancel-btn {
+  width: 100%;
+  padding: 15px;
+  margin-top: 40px;
+  background: #fff;
+  border: 1px solid #ff4d4f;
+  color: #ff4d4f;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.full-cancel-btn:hover {
+  background: #ff4d4f;
+  color: #fff;
+}

@@ -11,7 +11,6 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-
 // [정적 파일] 사용자가 올린 사진이나 기본 이미지를 프론트에서 볼 수 있게 함
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
@@ -312,6 +311,143 @@ app.put("/api/books/:bookUid", upload.any(), async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   } finally {
     if (conn) conn.release();
+  }
+});
+
+// 주문 견적 프록시
+app.post("/api/proxy/estimate", async (req, res) => {
+  try {
+    const API_KEY = process.env.SWEETBOOK_API_KEY;
+    const response = await fetch(
+      "https://api-sandbox.sweetbook.com/v1/orders/estimate",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req.body),
+      },
+    );
+
+    const result = await response.json();
+    // Sweetbook의 응답 구조인 { success: true, data: { ... } }를 그대로 프론트에 넘김
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "백엔드 프록시 에러" });
+  }
+});
+
+// 실제 주문 생성 프록시
+app.post("/api/proxy/order", async (req, res) => {
+  try {
+    const API_KEY = process.env.SWEETBOOK_API_KEY;
+    const response = await fetch(
+      "https://api-sandbox.sweetbook.com/v1/orders",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req.body),
+      },
+    );
+
+    const result = await response.json();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "주문 처리 중 에러 발생" });
+  }
+});
+
+// 주문 목록 조회 프록시
+app.get("/api/proxy/orders", async (req, res) => {
+  try {
+    const API_KEY = process.env.SWEETBOOK_API_KEY;
+    // 쿼리 파라미터(limit, offset 등)를 그대로 전달
+    const queryString = new URLSearchParams(req.query).toString();
+
+    const response = await fetch(
+      `https://api-sandbox.sweetbook.com/v1/orders?${queryString}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const result = await response.json();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "주문 목록 로드 실패" });
+  }
+});
+
+// 주문 취소 프록시
+app.post("/api/proxy/orders/:orderUid/cancel", async (req, res) => {
+  try {
+    const { orderUid } = req.params;
+    const response = await fetch(
+      `https://api-sandbox.sweetbook.com/v1/orders/${orderUid}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    const result = await response.json();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "취소 처리 중 오류 발생" });
+  }
+});
+
+// 주문 상세 조회 프록시
+app.get("/api/proxy/orders/:orderUid", async (req, res) => {
+  try {
+    const { orderUid } = req.params;
+    const API_KEY = process.env.SWEETBOOK_API_KEY;
+
+    console.log("---------------------------------");
+    console.log("1. 상세조회 요청 주문번호:", orderUid);
+    console.log(
+      "2. 사용 중인 API KEY 존재 여부:",
+      API_KEY ? "Yes" : "No (체크 필요!)",
+    );
+
+    const response = await fetch(
+      `https://api-sandbox.sweetbook.com/v1/orders/${orderUid}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const result = await response.json();
+
+    // 이 로그가 터미널에 어떻게 찍히는지 보세요
+    console.log(
+      "3. Sweetbook 응답 결과:",
+      JSON.stringify(result).substring(0, 100) + "...",
+    );
+
+    if (result.success) {
+      res.json(result);
+    } else {
+      console.error("4. API 응답 에러 상세:", result.message || result.errors);
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error("5. 서버 내부 에러:", error);
+    res.status(500).json({ success: false, message: "서버 프록시 오류" });
   }
 });
 

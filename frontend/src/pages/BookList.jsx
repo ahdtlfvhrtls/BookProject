@@ -12,11 +12,22 @@ export default function BookList() {
 
   return (
     <div className="container">
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1>📚 My Book</h1>
-        <button className="create-btn" onClick={() => navigate("/books/new")}>
-          + 책 만들기
-        </button>
+      <div className="list-header">
+        <h2>📚 내 책장</h2>
+        <div className="main-nav-bar">
+          <button
+            className="nav-btn btn-primary"
+            onClick={() => navigate("/create")}
+          >
+            ➕ 새 책 만들기
+          </button>
+          <button
+            className="nav-btn btn-outline"
+            onClick={() => navigate("/orders")}
+          >
+            📑 주문 내역 보기
+          </button>
+        </div>
       </div>
 
       <div className="grid">

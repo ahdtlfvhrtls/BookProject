@@ -3,6 +3,9 @@ import BookList from "./pages/BookList";
 import BookEditor from "./pages/BookEditor";
 import BookDetail from "./pages/BookDetail";
 import BookEdit from "./pages/BookEdit";
+import OrderPage from "./pages/OrderPage";
+import OrderListPage from "./pages/OrderListPage";
+import OrderDetailPage from "./pages/OrderDetailPage";
 
 function App() {
   return (
@@ -17,6 +20,12 @@ function App() {
 
         {/* 상세 페이지 */}
         <Route path="/books/:id" element={<BookDetail />} />
+        {/* 결제 페이지 */}
+        <Route path="/order/:id" element={<OrderPage />} />
+        {/* 주문 내역 페이지 */}
+        <Route path="/orders" element={<OrderListPage />} />
+        {/* 주문 상세 페이지 */}
+        <Route path="/orders/:orderUid" element={<OrderDetailPage />} />
       </Routes>
     </BrowserRouter>
   );
