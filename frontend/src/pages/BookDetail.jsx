@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { getBook } from "../api";
+import { useParams, useNavigate } from "react-router-dom";
+import { getBook, deleteBook } from "../api";
 
 export default function BookDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(0);
 
@@ -23,8 +24,30 @@ export default function BookDetail() {
 
   const current = data.pages[page];
 
+  const handleDelete = async () => {
+    if (!window.confirm("정말로 삭제하시겠습니까?")) return;
+
+    try {
+      const res = await deleteBook(id); // id는 useParams로 가져온 book_uid
+      if (res.success) {
+        alert("삭제되었습니다.");
+        navigate("/"); // 목록으로 이동
+      } else {
+        alert("삭제 실패: " + (res.message || "알 수 없는 오류"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("서버 통신 오류로 삭제에 실패했습니다.");
+    }
+  };
+
   return (
     <div className="book-container">
+      <div className="home-btn-wrapper">
+        <button className="home-btn" onClick={() => navigate("/")}>
+          🏠 목록으로
+        </button>
+      </div>
       <h2>{data.book.title}</h2>
       <h4 className="book-author">{data.book.author}</h4>
 
@@ -52,8 +75,15 @@ export default function BookDetail() {
 
       <div className="detail-actions">
         <div className="left-buttons">
-          <button className="edit-btn">수정</button>
-          <button className="delete-btn">삭제</button>
+          <button
+            className="edit-btn"
+            onClick={() => navigate(`/books/${id}/edit`)}
+          >
+            수정
+          </button>
+          <button className="delete-btn" onClick={handleDelete}>
+            삭제
+          </button>
         </div>
         <div className="right-buttons">
           <button className="order-btn">주문</button>

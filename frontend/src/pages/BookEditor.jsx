@@ -78,7 +78,7 @@ export default function BookEditor() {
 
       if (res.success) {
         alert("책 생성 완료!");
-        navigate(`/books/${res.bookUid}`);
+        navigate(`/`);
       } else {
         alert("생성 실패");
       }
@@ -90,6 +90,11 @@ export default function BookEditor() {
 
   return (
     <div className="editor">
+      <div className="home-btn-wrapper">
+        <button className="home-btn" onClick={() => navigate("/")}>
+          🏠 목록으로
+        </button>
+      </div>
       <h1>📚 책 만들기</h1>
       <div className="notice">
         본문 내용만 입력하면 나머지 표지/간지/발행면은 자동으로 생성됩니다.

@@ -230,12 +230,88 @@ app.post("/api/orders", async (req, res) => {
 app.delete("/api/books/:bookUid", async (req, res) => {
   const { bookUid } = req.params;
   try {
-    await pool.query("UPDATE books SET deleted_at = NOW() WHERE book_uid = ?", [
-      bookUid,
-    ]);
+    // 실제로 지우는 대신 deleted_at 컬럼에 시간을 기록해서 목록에서 안 보이게 함
+    const [result] = await pool.query(
+      "UPDATE books SET deleted_at = NOW() WHERE book_uid = ?",
+      [bookUid],
+    );
+
+    if (result.affectedRows === 0) {
+      return res
+        .status(404)
+        .json({ success: false, message: "책을 찾지 못했습니다." });
+    }
+
+    console.log(`🗑️ 책 삭제 완료: ${bookUid}`);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ success: false });
+    console.error("삭제 실패:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * 6. 책 수정 API (PUT /api/books/:bookUid)
+ */
+app.put("/api/books/:bookUid", upload.any(), async (req, res) => {
+  const { bookUid } = req.params;
+  let conn;
+  try {
+    const { title, author, pages } = req.body;
+    const parsedPages = JSON.parse(pages);
+
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // 1. 책 기본 정보(제목, 저자) 업데이트
+    await conn.query(
+      "UPDATE books SET title = ?, author = ? WHERE book_uid = ?",
+      [title, author, bookUid],
+    );
+
+    // 2. 기존 페이지 DB 데이터 삭제 (새로 다시 넣는게 안 꼬이고 제일 깔끔함)
+    await conn.query("DELETE FROM book_pages WHERE book_uid = ?", [bookUid]);
+
+    // 3. 페이지 이미지 처리 및 데이터 삽입
+    const pageFiles = req.files.filter((f) => f.fieldname === "images");
+
+    // 파일 업로드 카운터 (새로 업로드된 파일만 순서대로 꺼내기 위함)
+    let fileIdx = 0;
+
+    const pageValues = parsedPages.map((p, idx) => {
+      let finalImg = p.existingImage; // 새로 안 올렸으면 기존 파일명 유지
+
+      // 만약 해당 순서에 새로 올린 파일이 있다면 교체
+      if (req.files.find((f) => f.fieldname === `images_${idx}`)) {
+        const file = req.files.find((f) => f.fieldname === `images_${idx}`);
+        finalImg = `${Date.now()}_page_${idx}.jpg`;
+        fs.writeFileSync(path.join(UPLOAD_DIR, finalImg), file.buffer);
+      } else if (pageFiles[fileIdx] && p.file) {
+        // 기존 api.js 방식 호환용
+        finalImg = `${Date.now()}_page_${idx}.jpg`;
+        fs.writeFileSync(
+          path.join(UPLOAD_DIR, finalImg),
+          pageFiles[fileIdx].buffer,
+        );
+        fileIdx++;
+      }
+
+      return [bookUid, idx + 1, p.text, finalImg];
+    });
+
+    await conn.query(
+      "INSERT INTO book_pages (book_uid, page_number, text, image_url) VALUES ?",
+      [pageValues],
+    );
+
+    await conn.commit();
+    res.json({ success: true });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("수정 에러:", err);
+    res.status(500).json({ success: false, error: err.message });
+  } finally {
+    if (conn) conn.release();
   }
 });
 

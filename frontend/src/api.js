@@ -42,8 +42,12 @@ export const createBook = async (data) => {
   return res.json();
 };
 
+// 삭제
 export const deleteBook = async (bookUid) => {
-  await fetch(`/api/books/${bookUid}`, { method: "DELETE" });
+  const res = await fetch(`/api/books/${bookUid}`, {
+    method: "DELETE",
+  });
+  return res.json(); // 응답 결과를 JSON으로 변환해서 반환해야 함
 };
 
 export const orderBook = async (bookUid) => {
@@ -52,4 +56,35 @@ export const orderBook = async (bookUid) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ book_uid: bookUid }),
   });
+};
+
+// 수정
+export const updateBook = async (bookUid, data) => {
+  const formData = new FormData();
+  formData.append("title", data.title);
+  formData.append("author", data.author);
+
+  // existingImage 정보를 포함해서 보냄
+  const textPages = data.pages.map((p) => ({
+    text: p.text,
+    existingImage: p.image_url || null,
+  }));
+  formData.append("pages", JSON.stringify(textPages));
+
+  if (data.cover instanceof File) {
+    formData.append("cover", data.cover);
+  }
+
+  data.pages.forEach((page, idx) => {
+    if (page.file) {
+      // 어느 페이지의 사진인지 명확히 하기 위해 인덱스 포함
+      formData.append(`images_${idx}`, page.file);
+    }
+  });
+
+  const res = await fetch(`/api/books/${bookUid}`, {
+    method: "PUT",
+    body: formData,
+  });
+  return res.json();
 };
