@@ -251,3 +251,45 @@ textarea {
   background: #4f46e5;
   color: white;
 }
+
+/* 상세페이지 전용 */
+.book-container img {
+  display: block;
+  margin: 0 auto 16px;
+  max-height: 400px;
+  object-fit: cover;
+}
+
+.book-container .page p {
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
+.book-container .nav {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: center;
+}
+
+.book-container .nav button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.book-container .nav button:hover {
+  opacity: 0.8;
+}
+
+.book-container .nav span {
+  font-weight: bold;
+  font-size: 14px;
+}
