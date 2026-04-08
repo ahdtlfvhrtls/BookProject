@@ -390,20 +390,27 @@ app.get("/api/proxy/orders", async (req, res) => {
 app.post("/api/proxy/orders/:orderUid/cancel", async (req, res) => {
   try {
     const { orderUid } = req.params;
+    const API_KEY = process.env.SWEETBOOK_API_KEY;
+
     const response = await fetch(
       `https://api-sandbox.sweetbook.com/v1/orders/${orderUid}/cancel`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
+          Authorization: `Bearer ${API_KEY}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          cancelReason: "고객 요청으로 취소", // 명세서에 따른 필수 필드
+        }),
       },
     );
+
     const result = await response.json();
     res.json(result);
   } catch (error) {
-    res.status(500).json({ success: false, message: "취소 처리 중 오류 발생" });
+    console.error("취소 API 에러:", error);
+    res.status(500).json({ success: false, message: "서버 취소 처리 중 오류" });
   }
 });
 
