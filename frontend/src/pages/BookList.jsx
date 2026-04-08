@@ -29,7 +29,8 @@ export default function BookList() {
             <div className="thumb">
               {b.cover_image ? (
                 <img
-                  src={b.cover_image}
+                  src={`http://localhost:3000/uploads/${b.cover_image}`}
+                  alt="cover"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (

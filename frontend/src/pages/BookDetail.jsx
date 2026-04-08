@@ -32,7 +32,10 @@ export default function BookDetail() {
         <div className="page">
           {current.image_url && (
             <div className="page-image">
-              <img src={current.image_url} alt={`page ${page + 1}`} />
+              <img
+                src={`http://localhost:3000/uploads/${current.image_url}`}
+                alt={`page ${page + 1}`}
+              />
             </div>
           )}
           <div className="page-text">{current.text}</div>

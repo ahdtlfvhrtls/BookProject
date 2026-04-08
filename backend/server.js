@@ -12,413 +12,231 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// multer
+// [정적 파일] 사용자가 올린 사진이나 기본 이미지를 프론트에서 볼 수 있게 함
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 const upload = multer({ storage: multer.memoryStorage() });
 
-// DB pool
+// DB 연결 (한국 시간대 설정)
 const pool = mysql.createPool({
   host: "localhost",
   user: "root",
   password: "1234",
   database: "book_app",
+  timezone: "+09:00",
+  connectionLimit: 10,
 });
 
-// SweetBook API
 const API = "https://api-sandbox.sweetbook.com/v1";
-const HEADERS = {
-  Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
-};
+const HEADERS = { Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}` };
 
-// uploads 폴더 생성 (책 페이지 이미지 저장용)
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+const ASSETS_DIR = path.join(process.cwd(), "assets");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
 
-// 예: book_pages.image_url에 저장된 파일명을 로컬에서 제공
-app.get("/uploads/:filename", async (req, res) => {
-  const { filename } = req.params;
-  const filePath = path.join(UPLOAD_DIR, filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send("File not found");
+// Sweetbook API 호출용 헬퍼
+async function addContent(bookUid, templateUid, parameters, file = null) {
+  const form = new FormData();
+  form.append("templateUid", templateUid);
+  if (file) {
+    form.append(
+      "photo",
+      file.buffer || file,
+      file.originalname || "default.jpg",
+    );
+    parameters.photo = "$upload";
   }
+  form.append("parameters", JSON.stringify(parameters));
+  return axios.post(`${API}/books/${bookUid}/contents?breakBefore=page`, form, {
+    headers: { ...HEADERS, ...form.getHeaders() },
+  });
+}
 
-  res.sendFile(filePath);
+// --- 여기서부터 API 라우터 (생략 없음) ---
+
+/**
+ * 1. 책 목록 조회 (GET /api/books)
+ */
+app.get("/api/books", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY created_at DESC",
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("목록 조회 실패:", err);
+    res.status(500).json([]);
+  }
 });
 
-// 1. 책 생성 (SweetBook + DB 저장)
+/**
+ * 2. 책 상세 정보 조회 (GET /api/books/:bookUid/detail)
+ */
+app.get("/api/books/:bookUid/detail", async (req, res) => {
+  const { bookUid } = req.params;
+  try {
+    const [book] = await pool.query("SELECT * FROM books WHERE book_uid = ?", [
+      bookUid,
+    ]);
+    const [pages] = await pool.query(
+      "SELECT * FROM book_pages WHERE book_uid = ? ORDER BY page_number",
+      [bookUid],
+    );
+
+    if (book.length === 0) {
+      return res.status(404).json({ message: "데이터가 없습니다." });
+    }
+    res.json({ book: book[0], pages });
+  } catch (err) {
+    console.error("상세 조회 실패:", err);
+    res.status(500).json(err.message);
+  }
+});
+
+/**
+ * 3. 책 생성 (POST /api/books)
+ */
 app.post("/api/books", upload.any(), async (req, res) => {
   let conn;
-
   try {
     const { title, author, pages } = req.body;
-    const parsedPages = JSON.parse(pages);
+    const parsedPages = pages ? JSON.parse(pages) : [];
 
-    console.log("🔥 시작");
+    console.log("🚀 책 생성 시작...");
 
-    // 1️. 책 생성
     const bookRes = await axios.post(
       `${API}/books`,
       { title, bookSpecUid: "SQUAREBOOK_HC" },
       { headers: HEADERS },
     );
-
     const bookUid = bookRes.data.data.bookUid;
 
-    // 2️. 이미지 업로드 + 로컬 저장
     const coverFile = req.files.find((f) => f.fieldname === "cover");
     const pageFiles = req.files.filter((f) => f.fieldname === "images");
 
-    const uploadImage = async (file) => {
-      // SweetBook 업로드
-      const form = new FormData();
-      form.append("file", file.buffer, file.originalname);
+    const defaultImagePath = path.join(ASSETS_DIR, "default.jpg");
+    const defaultImageBuffer = fs.existsSync(defaultImagePath)
+      ? fs.readFileSync(defaultImagePath)
+      : null;
 
-      const res = await axios.post(`${API}/books/${bookUid}/photos`, form, {
-        headers: { ...HEADERS, ...form.getHeaders() },
-      });
-
-      const fileName = res.data.data.fileName;
-
-      // 로컬 저장
-      fs.writeFileSync(path.join(UPLOAD_DIR, fileName), file.buffer);
-
-      return fileName;
-    };
-
-    // cover
-    const coverFileName = coverFile ? await uploadImage(coverFile) : null;
-
-    // pages
-    const uploadedPhotos = [];
-    for (const file of pageFiles) {
-      const name = await uploadImage(file);
-      uploadedPhotos.push(name);
-    }
-
-    if (!coverFileName && uploadedPhotos.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "이미지 최소 1개 필요",
-      });
-    }
-
-    // 3️. 표지
+    // 표지
+    const coverPhoto =
+      coverFile ||
+      (pageFiles.length > 0
+        ? pageFiles[0]
+        : { buffer: defaultImageBuffer, originalname: "default.jpg" });
     const coverForm = new FormData();
     coverForm.append("templateUid", "79yjMH3qRPly");
     coverForm.append(
-      "parameters",
-      JSON.stringify({
-        title,
-        dateRange: "2026.04",
-        coverPhoto: coverFileName || uploadedPhotos[0],
-      }),
+      "coverPhoto",
+      coverPhoto.buffer,
+      coverPhoto.originalname || "cover.jpg",
     );
-
+    coverForm.append(
+      "parameters",
+      JSON.stringify({ title, dateRange: "2026.04", coverPhoto: "$upload" }),
+    );
     await axios.post(`${API}/books/${bookUid}/cover`, coverForm, {
       headers: { ...HEADERS, ...coverForm.getHeaders() },
     });
 
-    // 4️. 간지
-    const chapterForm = new FormData();
-    chapterForm.append("templateUid", "5M3oo7GlWKGO");
-    chapterForm.append(
-      "parameters",
-      JSON.stringify({
-        chapterNum: "01",
-        year: "2026",
-        monthTitle: "4월의 기록",
-      }),
-    );
-
-    await axios.post(
-      `${API}/books/${bookUid}/contents?breakBefore=page`,
-      chapterForm,
-      { headers: { ...HEADERS, ...chapterForm.getHeaders() } },
-    );
-
-    // 5️. 내지
-    let pageCount = 0;
-
-    while (pageCount < 24) {
-      const text = parsedPages[pageCount]?.text || `내용 ${pageCount + 1}`;
-      const photo = uploadedPhotos[pageCount % uploadedPhotos.length];
-
-      const form = new FormData();
-      form.append("templateUid", "46VqZhVNOfAp");
-      form.append(
-        "parameters",
-        JSON.stringify({
+    // 내지 (최소 26장 강제 채우기)
+    for (let i = 0; i < 26; i++) {
+      const text = parsedPages[i]?.text || " ";
+      let photo = pageFiles[i] ||
+        pageFiles[0] || {
+          buffer: defaultImageBuffer,
+          originalname: "default.jpg",
+        };
+      await addContent(
+        bookUid,
+        "46VqZhVNOfAp",
+        {
           monthNum: "04",
-          dayNum: String(pageCount + 1).padStart(2, "0"),
+          dayNum: String(i + 1).padStart(2, "0"),
           diaryText: text,
-          photo,
-        }),
+        },
+        photo,
       );
-
-      await axios.post(
-        `${API}/books/${bookUid}/contents?breakBefore=page`,
-        form,
-        { headers: { ...HEADERS, ...form.getHeaders() } },
-      );
-
-      pageCount++;
+      console.log(`✅ 내지 ${i + 1}/26 완료`);
     }
 
-    // 6️. 발행면
-    const publishForm = new FormData();
-    publishForm.append("templateUid", "5nhOVBjTnIVE");
-    publishForm.append(
-      "parameters",
-      JSON.stringify({
-        photo: uploadedPhotos[0],
-        title,
-        publishDate: "2026년 4월 5일",
-        author,
-        hashtags: "#일기 #기록",
-        publisher: "My App",
-      }),
-    );
-
-    await axios.post(
-      `${API}/books/${bookUid}/contents?breakBefore=page`,
-      publishForm,
-      { headers: { ...HEADERS, ...publishForm.getHeaders() } },
-    );
-
-    // 7. finalize
     await axios.post(
       `${API}/books/${bookUid}/finalization`,
       {},
       { headers: HEADERS },
     );
 
-    console.log("🎉 SweetBook 완료");
-
-    // DB 저장
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
-    await conn.query(
-      `INSERT INTO books (book_uid, title, author, cover_image)
-       VALUES (?, ?, ?, ?)`,
-      [bookUid, title, author, coverFileName || uploadedPhotos[0]],
-    );
-
-    const values = parsedPages.map((page, i) => [
-      bookUid,
-      i + 1,
-      page.text || null,
-      uploadedPhotos[i] || null,
-    ]);
+    const localCover = coverFile ? `${Date.now()}_cover.jpg` : "default.jpg";
+    if (coverFile)
+      fs.writeFileSync(path.join(UPLOAD_DIR, localCover), coverFile.buffer);
 
     await conn.query(
-      `INSERT INTO book_pages (book_uid, page_number, text, image_url)
-       VALUES ?`,
-      [values],
+      "INSERT INTO books (book_uid, title, author, cover_image) VALUES (?, ?, ?, ?)",
+      [bookUid, title, author, localCover],
     );
+
+    if (parsedPages.length > 0) {
+      const pageValues = parsedPages.map((p, idx) => {
+        let pageImg = null;
+        if (pageFiles[idx]) {
+          pageImg = `${Date.now()}_page_${idx}.jpg`;
+          fs.writeFileSync(
+            path.join(UPLOAD_DIR, pageImg),
+            pageFiles[idx].buffer,
+          );
+        }
+        return [bookUid, idx + 1, p.text, pageImg];
+      });
+      await conn.query(
+        "INSERT INTO book_pages (book_uid, page_number, text, image_url) VALUES ?",
+        [pageValues],
+      );
+    }
 
     await conn.commit();
-
     res.json({ success: true, bookUid });
   } catch (err) {
     if (conn) await conn.rollback();
-    console.error(err.response?.data || err.message);
-    res.status(500).json(err.response?.data || err.message);
+    console.error("❌ 생성 에러:", err.message);
+    res.status(500).json({ success: false, error: err.message });
   } finally {
     if (conn) conn.release();
   }
 });
 
-// 2. 책 조회 (DB 기준)
-app.get("/api/books/:bookUid/detail", async (req, res) => {
-  const { bookUid } = req.params;
-
-  try {
-    const [book] = await pool.query(
-      `SELECT * FROM books WHERE book_uid = ? AND deleted_at IS NULL`,
-      [bookUid],
-    );
-
-    if (book.length === 0) {
-      return res.status(404).json({ error: "not found" });
-    }
-
-    const [pages] = await pool.query(
-      `SELECT page_number, text, image_url
-       FROM book_pages
-       WHERE book_uid = ?
-       ORDER BY page_number`,
-      [bookUid],
-    );
-
-    const [orders] = await pool.query(
-      `SELECT id, status FROM orders WHERE book_uid = ?`,
-      [bookUid],
-    );
-
-    res.json({
-      book: book[0],
-      pages,
-      orders,
-    });
-  } catch (err) {
-    res.status(500).json(err.message);
-  }
-});
-
-// 3. 주문 생성
+/**
+ * 4. 주문 (POST /api/orders)
+ */
 app.post("/api/orders", async (req, res) => {
-  const { book_uid, buyer_name, buyer_email, address, phone } = req.body;
-
-  let conn;
+  const { book_uid } = req.body;
   try {
-    conn = await pool.getConnection();
-    await conn.beginTransaction();
-
-    const [order] = await conn.query(
-      `INSERT INTO orders (book_uid, buyer_name, buyer_email, status)
-       VALUES (?, ?, ?, 'PENDING')`,
-      [book_uid, buyer_name, buyer_email],
+    await pool.query(
+      "INSERT INTO orders (book_uid, status) VALUES (?, 'PENDING')",
+      [book_uid],
     );
-
-    await conn.query(
-      `INSERT INTO deliveries (order_id, address, recipient_name, phone)
-       VALUES (?, ?, ?, ?)`,
-      [order.insertId, address, buyer_name, phone],
-    );
-
-    await conn.commit();
-
-    res.json({ success: true, orderId: order.insertId });
-  } catch (err) {
-    if (conn) await conn.rollback();
-    res.status(500).json(err.message);
-  } finally {
-    if (conn) conn.release();
-  }
-});
-
-// 4. 주문 상세 조회
-app.get("/api/orders/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [order] = await pool.query(
-      `SELECT o.id, o.status, o.created_at,
-              b.title, b.author
-       FROM orders o
-       JOIN books b ON o.book_uid = b.book_uid
-       WHERE o.id = ?`,
-      [id],
-    );
-
-    const [delivery] = await pool.query(
-      `SELECT address, recipient_name, phone
-       FROM deliveries WHERE order_id = ?`,
-      [id],
-    );
-
-    res.json({
-      order: order[0],
-      delivery: delivery[0],
-    });
-  } catch (err) {
-    res.status(500).json(err.message);
-  }
-});
-
-// 5. 주문 목록
-app.get("/api/orders", async (req, res) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT o.id, o.status, o.created_at,
-              b.title, b.author
-       FROM orders o
-       JOIN books b ON o.book_uid = b.book_uid
-       ORDER BY o.created_at DESC`,
-    );
-
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json(err.message);
-  }
-});
-
-// 6. 책 수정 (기존 책을 복제 + 새로 생성 방식)
-app.post("/api/books/:bookUid/remake", async (req, res) => {
-  const { bookUid } = req.params;
-
-  try {
-    const [bookRows] = await pool.query(
-      `SELECT * FROM books WHERE book_uid = ?`,
-      [bookUid],
-    );
-
-    if (bookRows.length === 0) {
-      return res.status(404).json({ error: "book not found" });
-    }
-
-    const [pages] = await pool.query(
-      `SELECT text FROM book_pages WHERE book_uid = ? ORDER BY page_number`,
-      [bookUid],
-    );
-
-    const originalBook = bookRows[0];
-
-    const newTitle = req.body.title || originalBook.title;
-    const newAuthor = req.body.author || originalBook.author;
-
-    const newPages = req.body.pages || pages.map((p) => ({ text: p.text }));
-
-    const response = await axios.post("http://localhost:3000/api/books", {
-      title: newTitle,
-      author: newAuthor,
-      pages: JSON.stringify(newPages),
-    });
-
-    const newBookUid = response.data.bookUid;
-
-    await pool.query(`UPDATE books SET deleted_at = NOW() WHERE book_uid = ?`, [
-      bookUid,
-    ]);
-
-    res.json({
-      success: true,
-      newBookUid,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json(err.message);
-  }
-});
-
-// 7. 책 삭제 (Soft Delete)
-app.delete("/api/books/:bookUid", async (req, res) => {
-  const { bookUid } = req.params;
-
-  try {
-    await pool.query(`UPDATE books SET deleted_at = NOW() WHERE book_uid = ?`, [
-      bookUid,
-    ]);
-
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json(err.message);
+    res.status(500).json({ success: false });
   }
 });
 
-// 전체 책 조회
-app.get("/api/books", async (req, res) => {
+/**
+ * 5. 삭제 (DELETE /api/books/:bookUid)
+ */
+app.delete("/api/books/:bookUid", async (req, res) => {
+  const { bookUid } = req.params;
   try {
-    const [rows] = await pool.query(
-      "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY created_at DESC",
-    );
-
-    res.json(rows);
+    await pool.query("UPDATE books SET deleted_at = NOW() WHERE book_uid = ?", [
+      bookUid,
+    ]);
+    res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json(err.message);
+    res.status(500).json({ success: false });
   }
 });
 
-app.listen(3000, () => console.log("🚀 서버 실행 3000"));
+app.listen(3000, () => console.log("🚀 서버 실행 중: 3000"));

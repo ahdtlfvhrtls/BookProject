@@ -7,6 +7,7 @@ export default function BookEditor() {
 
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
+  // 각 페이지 객체에 file과 previewUrl을 직접 관리
   const [pages, setPages] = useState([
     { text: "", file: null, previewUrl: null },
   ]);
@@ -14,27 +15,37 @@ export default function BookEditor() {
   const [cover, setCover] = useState(null);
   const [coverPreview, setCoverPreview] = useState(null);
 
+  // 텍스트 변경
   const handlePageChange = (value) => {
     const newPages = [...pages];
     newPages[currentPage].text = value;
     setPages(newPages);
   };
 
+  // 현재 페이지의 이미지 변경
   const handlePageImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const newPages = [...pages];
+    // 기존 URL 메모리 해제 (성능 최적화)
+    if (newPages[currentPage].previewUrl) {
+      URL.revokeObjectURL(newPages[currentPage].previewUrl);
+    }
+
     newPages[currentPage] = {
       ...newPages[currentPage],
-      file,
+      file: file,
       previewUrl: URL.createObjectURL(file),
     };
     setPages(newPages);
   };
 
+  // 표지 변경
   const handleCoverChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCover(file);
     setCoverPreview(URL.createObjectURL(file));
   };
@@ -57,22 +68,17 @@ export default function BookEditor() {
       return;
     }
 
-    if (!cover && pages.every((p) => !p.file)) {
-      alert("표지 또는 페이지 이미지 최소 1개 필요");
-      return;
-    }
-
     try {
       const res = await createBook({
         title,
         author,
         cover,
-        pages,
+        pages, // 이제 pages 안에 각 파일 정보가 들어있음
       });
 
       if (res.success) {
         alert("책 생성 완료!");
-        navigate(`/books/${res.bookUid}/detail`);
+        navigate(`/books/${res.bookUid}`);
       } else {
         alert("생성 실패");
       }
@@ -109,10 +115,12 @@ export default function BookEditor() {
         </div>
 
         <div className="form-group">
-          <label>표지 이미지 업로드 (최소 1개)</label>
+          <label>표지 이미지</label>
           <input type="file" onChange={handleCoverChange} />
           {coverPreview && (
-            <img src={coverPreview} alt="cover" className="cover-preview" />
+            <div className="preview-container">
+              <img src={coverPreview} alt="cover" className="img-preview" />
+            </div>
           )}
         </div>
       </div>
@@ -138,15 +146,18 @@ export default function BookEditor() {
         placeholder="내용을 입력하세요..."
       />
 
-      <div className="form-group" style={{ marginTop: "10px" }}>
-        <label>이 페이지 이미지 업로드 (선택)</label>
-        <input type="file" onChange={handlePageImageChange} />
+      <div className="form-group" style={{ marginTop: "20px" }}>
+        <label>해당 페이지 이미지 (선택)</label>
+        {/* key를 currentPage로 주면 페이지 바뀔 때마다 input UI가 초기화되어 꼬이지 않음 */}
+        <input type="file" key={currentPage} onChange={handlePageImageChange} />
         {pages[currentPage].previewUrl && (
-          <img
-            src={pages[currentPage].previewUrl}
-            alt="page preview"
-            className="page-preview"
-          />
+          <div className="preview-container">
+            <img
+              src={pages[currentPage].previewUrl}
+              alt="page preview"
+              className="img-preview"
+            />
+          </div>
         )}
       </div>
 
