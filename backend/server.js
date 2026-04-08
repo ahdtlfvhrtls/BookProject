@@ -4,6 +4,8 @@ import axios from "axios";
 import FormData from "form-data";
 import dotenv from "dotenv";
 import mysql from "mysql2/promise";
+import path from "path";
+import fs from "fs";
 
 dotenv.config();
 
@@ -27,6 +29,22 @@ const HEADERS = {
   Authorization: `Bearer ${process.env.SWEETBOOK_API_KEY}`,
 };
 
+// uploads 폴더 생성 (책 페이지 이미지 저장용)
+const UPLOAD_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
+
+// 예: book_pages.image_url에 저장된 파일명을 로컬에서 제공
+app.get("/uploads/:filename", async (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(UPLOAD_DIR, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send("File not found");
+  }
+
+  res.sendFile(filePath);
+});
+
 // 1. 책 생성 (SweetBook + DB 저장)
 app.post("/api/books", upload.any(), async (req, res) => {
   let conn;
@@ -46,11 +64,12 @@ app.post("/api/books", upload.any(), async (req, res) => {
 
     const bookUid = bookRes.data.data.bookUid;
 
-    // 2️. 이미지 업로드
+    // 2️. 이미지 업로드 + 로컬 저장
     const coverFile = req.files.find((f) => f.fieldname === "cover");
     const pageFiles = req.files.filter((f) => f.fieldname === "images");
 
     const uploadImage = async (file) => {
+      // SweetBook 업로드
       const form = new FormData();
       form.append("file", file.buffer, file.originalname);
 
@@ -58,7 +77,12 @@ app.post("/api/books", upload.any(), async (req, res) => {
         headers: { ...HEADERS, ...form.getHeaders() },
       });
 
-      return res.data.data.fileName;
+      const fileName = res.data.data.fileName;
+
+      // 로컬 저장
+      fs.writeFileSync(path.join(UPLOAD_DIR, fileName), file.buffer);
+
+      return fileName;
     };
 
     // cover
@@ -176,7 +200,7 @@ app.post("/api/books", upload.any(), async (req, res) => {
 
     await conn.query(
       `INSERT INTO books (book_uid, title, author, cover_image)
-   VALUES (?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?)`,
       [bookUid, title, author, coverFileName || uploadedPhotos[0]],
     );
 
@@ -227,7 +251,6 @@ app.get("/api/books/:bookUid/detail", async (req, res) => {
       [bookUid],
     );
 
-    // 주문 여부까지 확인
     const [orders] = await pool.query(
       `SELECT id, status FROM orders WHERE book_uid = ?`,
       [bookUid],
@@ -326,7 +349,6 @@ app.post("/api/books/:bookUid/remake", async (req, res) => {
   const { bookUid } = req.params;
 
   try {
-    // 1️⃣ 기존 데이터 조회
     const [bookRows] = await pool.query(
       `SELECT * FROM books WHERE book_uid = ?`,
       [bookUid],
@@ -343,15 +365,10 @@ app.post("/api/books/:bookUid/remake", async (req, res) => {
 
     const originalBook = bookRows[0];
 
-    // 2️⃣ 수정 데이터 반영 (req.body로 덮어쓰기)
     const newTitle = req.body.title || originalBook.title;
     const newAuthor = req.body.author || originalBook.author;
 
     const newPages = req.body.pages || pages.map((p) => ({ text: p.text }));
-
-    // 3️⃣ 기존 생성 API 재사용 (핵심)
-    // 내부적으로 /api/books 로직을 함수로 빼는 게 베스트지만
-    // 여기선 간단히 다시 호출하는 방식
 
     const response = await axios.post("http://localhost:3000/api/books", {
       title: newTitle,
@@ -361,7 +378,6 @@ app.post("/api/books/:bookUid/remake", async (req, res) => {
 
     const newBookUid = response.data.bookUid;
 
-    // 4️⃣ 기존 책 soft delete
     await pool.query(`UPDATE books SET deleted_at = NOW() WHERE book_uid = ?`, [
       bookUid,
     ]);
@@ -391,6 +407,7 @@ app.delete("/api/books/:bookUid", async (req, res) => {
   }
 });
 
+// 전체 책 조회
 app.get("/api/books", async (req, res) => {
   try {
     const [rows] = await pool.query(
