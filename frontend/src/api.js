@@ -19,11 +19,14 @@ export const cancelOrder = async (orderUid) => {
 // 주문 상세 조회
 export const getOrderDetail = async (orderUid) => {
   const res = await fetch(`/api/proxy/orders/${orderUid}`);
+  if (!res.ok) {
+    throw new Error(`서버 상태 에러: ${res.status}`);
+  }
   return res.json();
 };
 
 export const getOrders = async (limit = 10) => {
-  const res = await fetch(`/api/proxy/orders?limit=${limit}`); // 주소 오타 체크
+  const res = await fetch(`/api/proxy/orders?limit=${limit}`);
   return res.json();
 };
 

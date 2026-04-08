@@ -13,7 +13,7 @@ export default function OrderPage() {
     postalCode: "",
     address1: "",
     address2: "",
-    memo: "",
+    memo: "", // 배송 메모 필드
   });
 
   useEffect(() => {
@@ -35,10 +35,20 @@ export default function OrderPage() {
   };
 
   const handleOrder = async () => {
+    // 필수 입력값 체크
+    if (
+      !shipping.recipientName ||
+      !shipping.recipientPhone ||
+      !shipping.address1
+    ) {
+      alert("배송 정보를 정확히 입력해주세요.");
+      return;
+    }
+
     try {
       const res = await createOrder({
         items: [{ bookUid: id, quantity: 1 }],
-        shipping,
+        shipping, // memo가 포함된 shipping 객체가 그대로 전송됩니다.
         externalRef: `order_${Date.now()}`,
       });
       if (res.success) {
@@ -66,6 +76,8 @@ export default function OrderPage() {
             <label className="order-label">이름</label>
             <input
               className="order-input"
+              placeholder="수령인 성함"
+              value={shipping.recipientName}
               onChange={(e) =>
                 setShipping({ ...shipping, recipientName: e.target.value })
               }
@@ -75,6 +87,8 @@ export default function OrderPage() {
             <label className="order-label">연락처</label>
             <input
               className="order-input"
+              placeholder="010-0000-0000"
+              value={shipping.recipientPhone}
               onChange={(e) =>
                 setShipping({ ...shipping, recipientPhone: e.target.value })
               }
@@ -92,6 +106,7 @@ export default function OrderPage() {
                 style={{ width: "120px" }}
                 value={shipping.postalCode}
                 readOnly
+                placeholder="우편번호"
               />
               <button
                 className="address-search-btn"
@@ -105,12 +120,31 @@ export default function OrderPage() {
               style={{ marginBottom: "10px" }}
               value={shipping.address1}
               readOnly
+              placeholder="기본 주소"
             />
             <input
               className="order-input"
+              style={{ marginBottom: "10px" }}
               placeholder="상세 주소"
+              value={shipping.address2}
               onChange={(e) =>
                 setShipping({ ...shipping, address2: e.target.value })
+              }
+            />
+
+            {/* 배송 메모 입력란 추가 */}
+            <label
+              className="order-label"
+              style={{ marginTop: "20px", display: "block" }}
+            >
+              배송 메모
+            </label>
+            <input
+              className="order-input"
+              placeholder="부재 시 문 앞에 놓아주세요 (선택사항)"
+              value={shipping.memo}
+              onChange={(e) =>
+                setShipping({ ...shipping, memo: e.target.value })
               }
             />
           </div>
@@ -127,7 +161,7 @@ export default function OrderPage() {
             <span>{estimate.shippingFee?.toLocaleString()}원</span>
           </div>
           <div className="total-amount-row">
-            <span>총 결제 금액</span>
+            <span>총 결제 금액 (VAT포함)</span>
             <span>{estimate.paidCreditAmount?.toLocaleString()}원</span>
           </div>
           <button

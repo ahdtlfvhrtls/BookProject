@@ -413,13 +413,6 @@ app.get("/api/proxy/orders/:orderUid", async (req, res) => {
     const { orderUid } = req.params;
     const API_KEY = process.env.SWEETBOOK_API_KEY;
 
-    console.log("---------------------------------");
-    console.log("1. 상세조회 요청 주문번호:", orderUid);
-    console.log(
-      "2. 사용 중인 API KEY 존재 여부:",
-      API_KEY ? "Yes" : "No (체크 필요!)",
-    );
-
     const response = await fetch(
       `https://api-sandbox.sweetbook.com/v1/orders/${orderUid}`,
       {
@@ -431,23 +424,19 @@ app.get("/api/proxy/orders/:orderUid", async (req, res) => {
       },
     );
 
-    const result = await response.json();
-
-    // 이 로그가 터미널에 어떻게 찍히는지 보세요
-    console.log(
-      "3. Sweetbook 응답 결과:",
-      JSON.stringify(result).substring(0, 100) + "...",
-    );
-
-    if (result.success) {
-      res.json(result);
-    } else {
-      console.error("4. API 응답 에러 상세:", result.message || result.errors);
-      res.status(400).json(result);
+    // 응답이 비어있는지 확인
+    const text = await response.text();
+    if (!text) {
+      return res
+        .status(500)
+        .json({ success: false, message: "응답 데이터가 비어있습니다." });
     }
+
+    const result = JSON.parse(text);
+    res.json(result); // 클라이언트에 전송
   } catch (error) {
-    console.error("5. 서버 내부 에러:", error);
-    res.status(500).json({ success: false, message: "서버 프록시 오류" });
+    console.error("상세조회 프록시 에러:", error);
+    res.status(500).json({ success: false, message: "서버 프록시 에러 발생" });
   }
 });
 

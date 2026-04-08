@@ -11,14 +11,11 @@ export default function OrderDetailPage() {
   useEffect(() => {
     getOrderDetail(orderUid)
       .then((res) => {
-        // 브라우저 개발자 도구(F12) 콘솔에서 이 로그를 꼭 확인하세요!
-        console.log("실제 넘어온 데이터 전체:", res);
-
         if (res.success && res.data) {
-          setOrder(res.data);
+          setOrder(res.data); // 스펙에 따르면 res.data 바로 아래 필드들이 있음
         }
       })
-      .catch((err) => console.error("상세조회 에러:", err))
+      .catch((err) => console.error("API 상세조회 실패:", err))
       .finally(() => setLoading(false));
   }, [orderUid]);
 
@@ -33,9 +30,12 @@ export default function OrderDetailPage() {
     }
   };
 
-  if (loading) return <div className="order-container">⌛ 불러오는 중...</div>;
+  if (loading)
+    return (
+      <div className="order-container">⌛ 주문 상세 정보를 가져오는 중...</div>
+    );
   if (!order)
-    return <div className="order-container">주문 내역이 없습니다.</div>;
+    return <div className="order-container">데이터를 찾을 수 없습니다.</div>;
 
   return (
     <div className="order-container" style={{ maxWidth: "700px" }}>
@@ -43,8 +43,8 @@ export default function OrderDetailPage() {
         ← 이전으로
       </button>
 
-      <div className="order-header" style={{ marginBottom: "30px" }}>
-        <h1 style={{ margin: 0 }}>주문 상세 내역</h1>
+      <div className="order-header">
+        <h1>주문 상세 내역</h1>
         <span
           className={`status-badge status-${order.orderStatus >= 50 ? "complete" : "pending"}`}
         >
@@ -53,41 +53,27 @@ export default function OrderDetailPage() {
       </div>
 
       <div className="detail-section">
-        <h3 className="order-section-title">📦 배송 정보</h3>
+        <h3 className="order-section-title">📦 배송지 정보</h3>
         <table className="detail-table">
           <tbody>
             <tr>
               <th>수령인</th>
-              {/* 혹시 몰라서 다양한 필드명을 체크하도록 방어 코드를 짰습니다 */}
-              <td>
-                {order.shipping?.recipientName ||
-                  order.recipientName ||
-                  "데이터 없음"}
-              </td>
+              <td>{order.recipientName}</td>
             </tr>
             <tr>
               <th>연락처</th>
-              <td>
-                {order.shipping?.recipientPhone ||
-                  order.recipientPhone ||
-                  "데이터 없음"}
-              </td>
+              <td>{order.recipientPhone}</td>
             </tr>
             <tr>
               <th>주소</th>
               <td>
-                {order.shipping?.postalCode || order.postalCode
-                  ? `(${order.shipping?.postalCode || order.postalCode}) `
-                  : ""}
-                {order.shipping?.address1 || order.address1}{" "}
-                {order.shipping?.address2 || order.address2}
-                {!(order.shipping?.address1 || order.address1) &&
-                  "주소 정보 없음"}
+                ({order.postalCode}) {order.address1} {order.address2}
               </td>
             </tr>
             <tr>
-              <th>배송메모</th>
-              <td>{order.shipping?.memo || order.memo || "없음"}</td>
+              <th>배송 메모</th>
+              {/* 스펙상 필드명은 shippingMemo입니다 */}
+              <td>{order.shippingMemo || "없음"}</td>
             </tr>
           </tbody>
         </table>
@@ -98,22 +84,29 @@ export default function OrderDetailPage() {
         <table className="detail-table">
           <tbody>
             <tr>
-              <th>상품 금액</th>
-              <td>{order.productAmount?.toLocaleString()}원</td>
+              <th>상품 합계</th>
+              <td>{Number(order.totalProductAmount).toLocaleString()}원</td>
             </tr>
             <tr>
               <th>배송비</th>
-              <td>{order.shippingFee?.toLocaleString()}원</td>
+              <td>{Number(order.totalShippingFee).toLocaleString()}원</td>
+            </tr>
+            <tr>
+              <th>포장비</th>
+              <td>{Number(order.totalPackagingFee || 0).toLocaleString()}원</td>
             </tr>
             <tr className="total-row">
-              <th>총 결제 금액</th>
-              <td>{order.totalAmount?.toLocaleString()}원</td>
+              <th>결제 금액 (VAT 포함)</th>
+              <td style={{ color: "#4f46e5", fontWeight: "bold" }}>
+                {Number(order.paidCreditAmount).toLocaleString()}원
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {order.orderStatus < 50 && (
+      {/* 상태 코드가 20(PAID) 또는 25(PDF_READY)일 때만 취소 가능 */}
+      {(order.orderStatus === 20 || order.orderStatus === 25) && (
         <button className="full-cancel-btn" onClick={handleCancel}>
           주문 취소하기
         </button>
